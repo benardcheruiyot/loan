@@ -27,6 +27,12 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.dispatchEvent(new Event('auth-expired'));
+    }
+
     const message = error.response?.data?.error?.message || error.response?.data?.message || error.message;
     console.error('API Error:', { 
       status: error.response?.status, 
