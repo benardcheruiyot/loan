@@ -1,0 +1,163 @@
+name: Deploy Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+
+    env:
+      VPS_USER: ${{ secrets.VPS_USER || 'root' }}
+      VPS_HOST: ${{ secrets.VPS_HOST || '153.75.247.188' }}
+      APP_DOMAIN: ${{ vars.APP_DOMAIN || 'talacash.mkopaji.com' }}
+      CERTBOT_EMAIL: ${{ vars.CERTBOT_EMAIL || 'admin@talacash.mkopaji.com' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare SSH access
+        shell: bash
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_HOST: ${{ secrets.VPS_HOST || '153.75.247.188' }}
+        run: |
+          set -euo pipefail
+
+          echo "Preparing deployment SSH access for production host ${VPS_HOST}"
+          sudo apt-get update
+          sudo apt-get install -y sshpass
+
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          if [ -n "${VPS_SSH_KEY:-}" ]; then
+            printf '%s\n' "${VPS_SSH_KEY}" > ~/.ssh/id_ed25519
+            chmod 600 ~/.ssh/id_ed25519
+            eval "$(ssh-agent -s)"
+            ssh-add ~/.ssh/id_ed25519
+            ssh-keyscan -H "${VPS_HOST}" >> ~/.ssh/known_hosts 2>/dev/null || true
+            chmod 600 ~/.ssh/known_hosts
+            echo "SSH_MODE=key" >> "$GITHUB_ENV"
+          else
+            touch ~/.ssh/known_hosts
+            chmod 600 ~/.ssh/known_hosts
+            echo "SSH_MODE=password" >> "$GITHUB_ENV"
+          fi
+
+          echo "DEPLOY_HOST=${VPS_USER}@${VPS_HOST}" >> "$GITHUB_ENV"
+
+      - name: Prepare env files from GitHub Secrets or defaults
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -n "${{ secrets.BACKEND_ENV_FILE }}" ]; then
+            printf '%s' "${{ secrets.BACKEND_ENV_FILE }}" > backend/.env
+          elif [ -f backend/.env.example ]; then
+            cp backend/.env.example backend/.env
+          else
+            echo "Missing backend env source: BACKEND_ENV_FILE and backend/.env.example"
+            exit 1
+          fi
+
+          if [ -n "${{ secrets.FRONTEND_ENV_FILE }}" ]; then
+            printf '%s' "${{ secrets.FRONTEND_ENV_FILE }}" > frontend/.env
+          elif [ -f frontend/.env.example ]; then
+            cp frontend/.env.example frontend/.env
+          else
+            echo "Missing frontend env source: FRONTEND_ENV_FILE and frontend/.env.example"
+            exit 1
+          fi
+
+          echo "Using runtime env files for deployment:"
+          ls -l backend/.env frontend/.env
+
+      - name: Run full remote recovery deployment
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ env.DEPLOY_HOST }}
+          SSH_PASSWORD: ${{ secrets.VPS_PASSWORD }}
+          APP_DOMAIN: ${{ env.APP_DOMAIN }}
+          CERTBOT_EMAIL: ${{ env.CERTBOT_EMAIL }}
+          DEPLOY_REPO: ${{ vars.DEPLOY_REPO }}
+          DEPLOY_BRANCH: ${{ vars.DEPLOY_BRANCH }}
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+        run: |
+          set -euo pipefail
+
+          if [ "${SSH_MODE:-key}" = "password" ] && [ -z "${SSH_PASSWORD:-}" ]; then
+            echo "No SSH key and no VPS_PASSWORD were supplied. Deployment cannot continue."
+            exit 1
+          fi
+
+          chmod +x ./deploy_and_restart.sh
+
+          ARGS=(
+            --host "$DEPLOY_HOST"
+            --domain "${APP_DOMAIN:-talacash.mkopaji.com}"
+            --email "${CERTBOT_EMAIL:-admin@talacash.mkopaji.com}"
+          )
+
+          if [ -n "${DEPLOY_REPO:-}" ]; then
+            ARGS+=(--repo "$DEPLOY_REPO")
+          fi
+
+          if [ -n "${DEPLOY_BRANCH:-}" ]; then
+            ARGS+=(--branch "$DEPLOY_BRANCH")
+          fi
+
+          if [ -n "${DEPLOY_PATH:-}" ]; then
+            ARGS+=(--project-dir "$DEPLOY_PATH")
+          fi
+
+          ./deploy_and_restart.sh "${ARGS[@]}"
+
+      - name: Verify domain and API health
+        shell: bash
+        env:
+          APP_DOMAIN: ${{ vars.APP_DOMAIN }}
+        run: |
+          set -euo pipefail
+          DOMAIN="${APP_DOMAIN:-talacash.mkopaji.com}"
+          ok=0
+
+          for i in $(seq 1 18); do
+            if curl -fsS --max-time 10 "https://$DOMAIN/api/health" >/dev/null; then
+              ok=1
+              break
+            fi
+
+            if curl -fsS --max-time 10 "http://$DOMAIN/api/health" >/dev/null; then
+              ok=1
+              break
+            fi
+
+            if curl -fsS --max-time 10 "https://$DOMAIN" >/dev/null; then
+              ok=1
+              break
+            fi
+
+            if curl -fsS --max-time 10 "http://$DOMAIN" >/dev/null; then
+              ok=1
+              break
+            fi
+
+            echo "Public health check retry ${i}/18"
+            sleep 10
+          done
+
+          if [ "$ok" -ne 1 ]; then
+            echo "Public endpoint did not become healthy in time: $DOMAIN"
+            exit 1
+          fi

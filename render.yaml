@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: lendhub-backend
+    env: node
+    plan: free
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: PAYMENT_PROVIDER
+        value: daraja
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: APP_PUBLIC_URL
+        sync: false
+      # ADD THESE IN RENDER DASHBOARD (DO NOT COMMIT SECRETS):
+      # - key: DARAJA_CONSUMER_KEY
+      #   value: your_daraja_consumer_key
+      # - key: DARAJA_CONSUMER_SECRET
+      #   value: your_daraja_consumer_secret
+      # - key: DARAJA_BUSINESS_SHORTCODE
+      #   sync: false
+      # - key: DARAJA_PARTYB_SHORTCODE
+      #   sync: false
+      # - key: DARAJA_CALLBACK_URL
+      #   value: https://api.lendhub.render.com/api/payments/callback
+      # - key: VAPID_PUBLIC_KEY
+      #   value: your_vapid_public_key
+      # - key: VAPID_PRIVATE_KEY
+      #   value: your_vapid_private_key
