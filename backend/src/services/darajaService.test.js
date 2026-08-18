@@ -29,7 +29,7 @@ describe('DarajaService STK payload', () => {
 
     const payload = axios.post.mock.calls[0][1];
     expect(payload.TransactionType).toBe('CustomerBuyGoodsOnline');
-    expect(payload.BusinessShortCode).toBe('3700945');
-    expect(payload.PartyB).toBe('3072401');
+    expect(payload.BusinessShortCode).toBe(3700945);
+    expect(payload.PartyB).toBe(3072401);
   });
 });

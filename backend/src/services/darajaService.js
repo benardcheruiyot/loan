@@ -119,13 +119,13 @@ class DarajaService {
       const password = Buffer.from(`${this.businessShortcode}${this.passkey || ''}${timestamp}`).toString('base64');
 
       const payload = {
-        BusinessShortCode: this.businessShortcode,
+        BusinessShortCode: Number(this.businessShortcode),
         Password: password,
         Timestamp: timestamp,
         TransactionType: 'CustomerBuyGoodsOnline',
         Amount: Number(amount),
         PartyA: normalizedPhone,
-        PartyB: this.partyBShortcode,
+        PartyB: Number(this.partyBShortcode),
         PhoneNumber: normalizedPhone,
         CallBackURL: this.callbackUrl,
         AccountReference: this.accountReference,
