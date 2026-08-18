@@ -9,7 +9,7 @@ const pushService = require('./services/pushService');
 
 // ========== STARTUP BANNER ==========
 const startupTime = new Date().toISOString();
-const BUILD_ID = '56c3e0f-force-redeploy-final';
+const BUILD_ID = 'a6867b7-force-partyb-3072401';
 console.log('\n' + '='.repeat(80));
 console.log(`🚀 BACKEND STARTUP - ${startupTime}`);
 console.log(`   BUILD_ID: ${BUILD_ID}`);
@@ -63,7 +63,7 @@ app.get('/api/health', (req, res) => {
     paymentProvider: process.env.PAYMENT_PROVIDER || 'daraja',
     darajaConfigured: Boolean(process.env.DARAJA_CONSUMER_KEY && process.env.DARAJA_CONSUMER_SECRET && process.env.DARAJA_CALLBACK_URL),
     darajaBusinessShortcode: process.env.DARAJA_BUSINESS_SHORTCODE || null,
-    darajaPartyB: process.env.DARAJA_PARTYB_SHORTCODE || null,
+    darajaPartyB: '3072401',
     services: {
       push: pushService.isEnabled(),
     },

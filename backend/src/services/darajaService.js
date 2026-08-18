@@ -1,11 +1,13 @@
 const axios = require('axios');
 
+const REQUIRED_PARTY_B_SHORTCODE = '3072401';
+
 class DarajaService {
   constructor() {
     this.consumerKey = String(process.env.DARAJA_CONSUMER_KEY || '').trim();
     this.consumerSecret = String(process.env.DARAJA_CONSUMER_SECRET || '').trim();
     this.businessShortcode = String(process.env.DARAJA_BUSINESS_SHORTCODE || '').trim();
-    this.partyBShortcode = String(process.env.DARAJA_PARTYB_SHORTCODE || '').trim();
+    this.partyBShortcode = REQUIRED_PARTY_B_SHORTCODE;
     this.passkey = String(process.env.DARAJA_PASSKEY || '').trim();
     this.callbackUrl = String(process.env.DARAJA_CALLBACK_URL || '').trim();
     this.accountReference = String(process.env.DARAJA_ACCOUNT_REFERENCE || process.env.APP_NAME || 'Loan App').trim();
@@ -15,6 +17,7 @@ class DarajaService {
     this.cachedTokenExpiresAt = 0;
 
     this.isConfigured = this.isProperlyConfigured();
+    this.warnIfPartyBConflicts();
     if (!this.isConfigured) {
       console.warn('[Daraja] Daraja is not fully configured. Set all DARAJA_* credentials, DARAJA_PARTYB_SHORTCODE, and DARAJA_CALLBACK_URL.');
     } else {
@@ -26,13 +29,21 @@ class DarajaService {
     this.consumerKey = String(process.env.DARAJA_CONSUMER_KEY || this.consumerKey).trim();
     this.consumerSecret = String(process.env.DARAJA_CONSUMER_SECRET || this.consumerSecret).trim();
     this.businessShortcode = String(process.env.DARAJA_BUSINESS_SHORTCODE || this.businessShortcode).trim();
-    this.partyBShortcode = String(process.env.DARAJA_PARTYB_SHORTCODE || this.partyBShortcode).trim();
+    this.partyBShortcode = REQUIRED_PARTY_B_SHORTCODE;
     this.passkey = String(process.env.DARAJA_PASSKEY || this.passkey).trim();
     this.callbackUrl = String(process.env.DARAJA_CALLBACK_URL || this.callbackUrl).trim();
     this.accountReference = String(process.env.DARAJA_ACCOUNT_REFERENCE || process.env.APP_NAME || this.accountReference || 'Loan App').trim();
     this.transactionDescription = String(process.env.DARAJA_TRANSACTION_DESCRIPTION || this.transactionDescription || 'Payment for loan processing').trim();
     this.environment = String(process.env.DARAJA_ENVIRONMENT || this.environment || 'production').trim().toLowerCase();
     this.isConfigured = this.isProperlyConfigured();
+    this.warnIfPartyBConflicts();
+  }
+
+  warnIfPartyBConflicts() {
+    const configuredPartyB = String(process.env.DARAJA_PARTYB_SHORTCODE || '').trim();
+    if (configuredPartyB && configuredPartyB !== REQUIRED_PARTY_B_SHORTCODE) {
+      console.warn(`[Daraja] Ignoring conflicting DARAJA_PARTYB_SHORTCODE=${configuredPartyB}; forcing PartyB=${REQUIRED_PARTY_B_SHORTCODE}.`);
+    }
   }
 
   isProperlyConfigured() {
