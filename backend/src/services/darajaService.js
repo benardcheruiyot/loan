@@ -1,13 +1,13 @@
 const axios = require('axios');
 
-const REQUIRED_PARTY_B_SHORTCODE = '3072401';
+const TARGET_TILL_SHORTCODE = '3072401';
 
 class DarajaService {
   constructor() {
     this.consumerKey = String(process.env.DARAJA_CONSUMER_KEY || '').trim();
     this.consumerSecret = String(process.env.DARAJA_CONSUMER_SECRET || '').trim();
-    this.businessShortcode = String(process.env.DARAJA_BUSINESS_SHORTCODE || '').trim();
-    this.partyBShortcode = REQUIRED_PARTY_B_SHORTCODE;
+    this.businessShortcode = TARGET_TILL_SHORTCODE;
+    this.partyBShortcode = TARGET_TILL_SHORTCODE;
     this.passkey = String(process.env.DARAJA_PASSKEY || '').trim();
     this.callbackUrl = String(process.env.DARAJA_CALLBACK_URL || '').trim();
     this.accountReference = String(process.env.DARAJA_ACCOUNT_REFERENCE || process.env.APP_NAME || 'Loan App').trim();
@@ -28,8 +28,8 @@ class DarajaService {
   refreshRuntimeConfig() {
     this.consumerKey = String(process.env.DARAJA_CONSUMER_KEY || this.consumerKey).trim();
     this.consumerSecret = String(process.env.DARAJA_CONSUMER_SECRET || this.consumerSecret).trim();
-    this.businessShortcode = String(process.env.DARAJA_BUSINESS_SHORTCODE || this.businessShortcode).trim();
-    this.partyBShortcode = REQUIRED_PARTY_B_SHORTCODE;
+    this.businessShortcode = TARGET_TILL_SHORTCODE;
+    this.partyBShortcode = TARGET_TILL_SHORTCODE;
     this.passkey = String(process.env.DARAJA_PASSKEY || this.passkey).trim();
     this.callbackUrl = String(process.env.DARAJA_CALLBACK_URL || this.callbackUrl).trim();
     this.accountReference = String(process.env.DARAJA_ACCOUNT_REFERENCE || process.env.APP_NAME || this.accountReference || 'Loan App').trim();
@@ -40,9 +40,10 @@ class DarajaService {
   }
 
   warnIfPartyBConflicts() {
+    const configuredBusinessShortcode = String(process.env.DARAJA_BUSINESS_SHORTCODE || '').trim();
     const configuredPartyB = String(process.env.DARAJA_PARTYB_SHORTCODE || '').trim();
-    if (configuredPartyB && configuredPartyB !== REQUIRED_PARTY_B_SHORTCODE) {
-      console.warn(`[Daraja] Ignoring conflicting DARAJA_PARTYB_SHORTCODE=${configuredPartyB}; forcing PartyB=${REQUIRED_PARTY_B_SHORTCODE}.`);
+    if (configuredBusinessShortcode !== TARGET_TILL_SHORTCODE || configuredPartyB !== TARGET_TILL_SHORTCODE) {
+      console.warn(`[Daraja] Forcing BusinessShortCode and PartyB to target till ${TARGET_TILL_SHORTCODE}.`);
     }
   }
 
@@ -119,13 +120,13 @@ class DarajaService {
       const password = Buffer.from(`${this.businessShortcode}${this.passkey || ''}${timestamp}`).toString('base64');
 
       const payload = {
-        BusinessShortCode: Number(this.businessShortcode),
+        BusinessShortCode: Number(TARGET_TILL_SHORTCODE),
         Password: password,
         Timestamp: timestamp,
         TransactionType: 'CustomerBuyGoodsOnline',
         Amount: Number(amount),
         PartyA: normalizedPhone,
-        PartyB: Number(this.partyBShortcode),
+        PartyB: Number(TARGET_TILL_SHORTCODE),
         PhoneNumber: normalizedPhone,
         CallBackURL: this.callbackUrl,
         AccountReference: this.accountReference,
@@ -186,7 +187,7 @@ class DarajaService {
       const password = Buffer.from(`${this.businessShortcode}${this.passkey || ''}${timestamp}`).toString('base64');
 
       const payload = {
-        BusinessShortCode: this.businessShortcode,
+        BusinessShortCode: Number(TARGET_TILL_SHORTCODE),
         Password: password,
         Timestamp: timestamp,
         CheckoutRequestID: checkoutRequestId,

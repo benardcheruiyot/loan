@@ -62,7 +62,7 @@ app.get('/api/health', (req, res) => {
     nodeEnv: process.env.NODE_ENV,
     paymentProvider: process.env.PAYMENT_PROVIDER || 'daraja',
     darajaConfigured: Boolean(process.env.DARAJA_CONSUMER_KEY && process.env.DARAJA_CONSUMER_SECRET && process.env.DARAJA_CALLBACK_URL),
-    darajaBusinessShortcode: process.env.DARAJA_BUSINESS_SHORTCODE || null,
+    darajaBusinessShortcode: '3072401',
     darajaPartyB: '3072401',
     services: {
       push: pushService.isEnabled(),
