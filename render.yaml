@@ -23,8 +23,8 @@ services:
       #   value: your_daraja_consumer_key
       # - key: DARAJA_CONSUMER_SECRET
       #   value: your_daraja_consumer_secret
-      # - key: DARAJA_BUSINESS_SHORTCODE
-      #   sync: false
+      - key: DARAJA_BUSINESS_SHORTCODE
+        value: 3700945
       - key: DARAJA_PARTYB_SHORTCODE
         value: 3072401
       - key: DARAJA_CALLBACK_URL
