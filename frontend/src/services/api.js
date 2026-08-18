@@ -1,6 +1,14 @@
 // API Service
 import axios from 'axios';
 
+const AUTH_SESSION_VERSION = '2026-08-19-1';
+
+if (localStorage.getItem('auth_session_version') !== AUTH_SESSION_VERSION) {
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  localStorage.setItem('auth_session_version', AUTH_SESSION_VERSION);
+}
+
 const API_URL =
   process.env.REACT_APP_API_URL ||
   (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
@@ -50,6 +58,7 @@ export const authService = {
     if (response.data.data.token) {
       localStorage.setItem('token', response.data.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.data.user));
+      localStorage.setItem('auth_session_version', AUTH_SESSION_VERSION);
     }
     return response.data.data;
   },
