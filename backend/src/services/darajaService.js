@@ -95,6 +95,32 @@ class DarajaService {
     return this.cachedToken;
   }
 
+  async postWithFreshToken(url, payload) {
+    const request = async (token) => axios.post(url, payload, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      timeout: 30000,
+    });
+
+    try {
+      return await request(await this.getAccessToken());
+    } catch (error) {
+      const status = error.response?.status;
+      const message = String(error.response?.data?.errorMessage || error.response?.data?.message || '').toLowerCase();
+      const tokenRejected = status === 401 || message.includes('invalid or expired token');
+
+      if (!tokenRejected) {
+        throw error;
+      }
+
+      this.cachedToken = null;
+      this.cachedTokenExpiresAt = 0;
+      return request(await this.getAccessToken());
+    }
+  }
+
   async initiatePayment(phone, amount) {
     this.refreshRuntimeConfig();
 
@@ -114,7 +140,6 @@ class DarajaService {
     }
 
     try {
-      const token = await this.getAccessToken();
       const timestamp = this.getTimestamp();
       const password = Buffer.from(`${this.businessShortcode}${this.passkey || ''}${timestamp}`).toString('base64');
 
@@ -132,13 +157,10 @@ class DarajaService {
         TransactionDesc: this.transactionDescription,
       };
 
-      const response = await axios.post(`${this.getBaseUrl()}/mpesa/stkpush/v1/processrequest`, payload, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        timeout: 30000,
-      });
+      const response = await this.postWithFreshToken(
+        `${this.getBaseUrl()}/mpesa/stkpush/v1/processrequest`,
+        payload
+      );
 
       const result = response.data || {};
       const checkoutRequestId = result.CheckoutRequestID || result.checkoutRequestId || `CHK-${Date.now()}`;
@@ -181,7 +203,6 @@ class DarajaService {
     }
 
     try {
-      const token = await this.getAccessToken();
       const timestamp = this.getTimestamp();
       const password = Buffer.from(`${this.businessShortcode}${this.passkey || ''}${timestamp}`).toString('base64');
 
@@ -192,13 +213,10 @@ class DarajaService {
         CheckoutRequestID: checkoutRequestId,
       };
 
-      const response = await axios.post(`${this.getBaseUrl()}/mpesa/stkpushquery/v1/query`, payload, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        timeout: 30000,
-      });
+      const response = await this.postWithFreshToken(
+        `${this.getBaseUrl()}/mpesa/stkpushquery/v1/query`,
+        payload
+      );
 
       const result = response.data || {};
       const resultCode = String(result.ResultCode || '');
